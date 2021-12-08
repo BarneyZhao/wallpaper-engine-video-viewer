@@ -78,16 +78,17 @@ watch(projectsPageList, () => {
 
 <template>
   <div class="folder-line">
-    <el-button :size="'small'" @click="selectFolder">选择文件夹</el-button>
+    <ElButton :size="'small'" @click="selectFolder">选择文件夹</ElButton>
     <span>path:{{ selectedPath }}</span>
     <span v-loading="isLoading"></span>
   </div>
   <div class="pagination-line">
-    <el-pagination
+    <ElPagination
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
       :total="projects.length"
+      background
       layout="prev, pager, next, total, sizes"
     />
   </div>
@@ -109,11 +110,12 @@ watch(projectsPageList, () => {
     <div v-for="i in 20" :key="i" class="pic-item" style="margin-top: 0"></div>
   </div>
   <div class="pagination-line">
-    <el-pagination
+    <ElPagination
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
       :total="projects.length"
+      background
       layout="prev, pager, next, total, sizes"
     />
   </div>
