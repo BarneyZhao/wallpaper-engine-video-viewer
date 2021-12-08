@@ -1,9 +1,12 @@
 {
-  "name": "vite-vue3-test",
-  "version": "0.0.0",
+  "name": "wallpaper-engine-video-viewer",
+  "version": "0.0.1",
+  "repository": {
+    "url": "https://gitee.com/barneyZhao/wallpaper-engine-video-viewer.git"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && vite build && node scripts/deploy.js release",
     "serve": "vite preview"
   },
   "dependencies": {
@@ -21,9 +24,12 @@
     "eslint": "^8.0.1",
     "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-vue": "^7.19.1",
+    "gh-pages": "^3.2.3",
+    "inquirer": "^8.2.0",
     "less": "^4.1.2",
     "lint-staged": "^11.2.3",
     "prettier": "^2.4.1",
+    "react-dev-utils": "^11.0.4",
     "typescript": "^4.4.3",
     "vite": "^2.6.4",
     "vue-tsc": "^0.3.0"
