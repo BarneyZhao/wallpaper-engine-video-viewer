@@ -41,7 +41,7 @@ if (!["release"].includes(branch)) {
     {
       branch,
       repo,
-      dest: "dist/",
+      dest: "docs/",
       message,
     },
     successFunc
