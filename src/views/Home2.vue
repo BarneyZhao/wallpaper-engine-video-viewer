@@ -70,7 +70,8 @@ const openFile = (project: any) => {
 watchEffect(() => {
   window.electron.apis
     .getProjectsByPage("", currentPage.value, pageSize.value)
-    .then((list: any) => {
+    .then((res: any) => {
+      const list = res.data;
       console.log("list", list);
 
       projects.value = list;
