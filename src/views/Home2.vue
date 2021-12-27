@@ -51,7 +51,9 @@ const selectFolder = async () => {
   }
 };
 const getImg = (project: any) => {
-  return window.electron.getImg(getFilePath(project.jsonPath, project.preview));
+  return window.electron.getImg(
+    getFilePath(project.json_path, project.preview)
+  );
 };
 const syncLoadImg = async (_projects: any[]) => {
   for (const [index, project] of _projects.entries()) {
@@ -60,7 +62,7 @@ const syncLoadImg = async (_projects: any[]) => {
   }
 };
 const openFile = (project: any) => {
-  window.electron.apis.openFile(getFilePath(project.jsonPath, project.file));
+  window.electron.apis.openFile(getFilePath(project.json_path, project.file));
 };
 
 // watch(projectsPageList, () => {
