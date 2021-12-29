@@ -1,18 +1,13 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 // const inquirer = require("inquirer");
 const ghpages = require("gh-pages");
-const openBrowser = require("react-dev-utils/openBrowser");
 const chalk = require("react-dev-utils/chalk");
 
 const repo = require("../package.json").repository.url;
 const branch = process.argv[2];
 
 const successFunc = () => {
-  const giteeUrl =
-    "https://gitee.com/barneyZhao/wallpaper-engine-video-viewer/pages";
   console.log(chalk.green(` Success publish to ${branch} branch! \n`));
-  console.log(` Auto open browser to ${chalk.yellow(giteeUrl)} \n`);
-  openBrowser(giteeUrl);
 };
 
 if (!["release"].includes(branch)) {

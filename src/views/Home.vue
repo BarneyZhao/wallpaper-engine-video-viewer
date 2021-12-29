@@ -1,111 +1,164 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { useArrayPagination } from "vue-composable";
-import { ElButton, ElPagination } from "element-plus";
+import { ElButton, ElPagination, ElMessage, ElCheckbox } from "element-plus";
 import "element-plus/es/components/button/style/css";
 import "element-plus/es/components/pagination/style/css";
+import "element-plus/es/components/message/style/css";
+import "element-plus/es/components/checkbox/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
+import { getLocal, setLocal } from "../utils";
 
 // defineProps<{ msg?: string }>();
+
+interface Project {
+  project_folder: string;
+  file: string;
+  preview: string;
+  title: string;
+}
 
 console.log(window.electron);
 
 const isLoading = ref(false);
-const selectedPath = ref("");
-const projects = ref<any[]>([]);
-const pageSize = ref(DEFAULT_PAGE_SIZE);
+const selectedPath = ref(getLocal<string>("SELECTED_PATH") || "");
+const projects = ref<Project[]>([]);
+const pageTotal = ref(0);
+const currentPage = ref(1);
+const pageSize = ref(getLocal<number>("PAGE_SIZE") || DEFAULT_PAGE_SIZE);
 const projectImgs = ref<string[]>([]);
+const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
-const {
-  result: projectsPageList,
-  currentPage,
-  // lastPage,
-  // next,
-  // prev,
-} = useArrayPagination(projects, {
-  pageSize,
-});
-
-const getFilePath = (jsonPath: string, file: string) => {
-  return (
-    selectedPath.value +
-    jsonPath.substring(0, jsonPath.lastIndexOf("/") + 1) +
-    file
-  );
+const getFilePath = (projectFolder: string, file: string) => {
+  return `${selectedPath.value + projectFolder}/${file}`;
 };
-
-const selectFolder = async () => {
-  const res = await window.electron.apis.selectFolder();
-  console.log(res);
-  if (res.success) {
-    selectedPath.value = res.data;
-    isLoading.value = true;
-    const timePromise = new Promise((resolve) => setTimeout(resolve, 500));
-    const jsonsRes = await window.electron.apis.getProjects(res.data);
-    if (jsonsRes.success) {
-      projects.value = jsonsRes.data;
-      currentPage.value = 1;
-    }
-    // isLoading.value = false;
-    timePromise.then(() => {
-      isLoading.value = false;
-    });
-  }
-};
-const getImg = (project: any) => {
+const getImg = (_project: Project) => {
   return window.electron.getImg(
-    getFilePath(project.relativeJsonPath, project.preview)
+    getFilePath(_project.project_folder, _project.preview)
   );
 };
-const syncLoadImg = async (_projects: any[]) => {
+const syncLoadImg = async (_projects: Project[]) => {
   for (const [index, project] of _projects.entries()) {
     const base64data = await getImg(project);
     projectImgs.value.splice(index, 1, base64data);
   }
 };
-const openFile = (project: any) => {
+const openFile = (_project: Project) => {
   window.electron.apis.openFile(
-    getFilePath(project.relativeJsonPath, project.file)
+    getFilePath(_project.project_folder, _project.file)
   );
 };
+const getProjects = async (_path: string, _page: number, _pageSize: number) => {
+  if (!_path) return;
+  window.electron.apis
+    .getProjectsByPage(_path, _page, _pageSize)
+    .then((res: any) => {
+      console.log("getProjects res", res);
+      const list = res.data.list;
 
-watch(projectsPageList, () => {
-  projectImgs.value = new Array(projectsPageList.value.length).fill(undefined);
-  syncLoadImg(projectsPageList.value);
+      projects.value = list;
+      pageTotal.value = res.data.total;
+      projectImgs.value = new Array(list.length).fill(undefined);
+      syncLoadImg(list);
+    });
+};
+const scanProjects = async (_path: string) => {
+  isLoading.value = true;
+  const timePromise = new Promise((resolve) => setTimeout(resolve, 500));
+  const scanRes = await window.electron.apis.scanProjectsToDb(_path);
+
+  timePromise.then(() => {
+    isLoading.value = false;
+    console.log("scanRes", scanRes);
+
+    if (scanRes.success) {
+      ElMessage({
+        message: `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`,
+        type: "success",
+        duration: 1500,
+      });
+      if (currentPage.value === 1) {
+        // currentPage 本来就是 1，无法触发 watch，故手动调用
+        getProjects(selectedPath.value, 1, pageSize.value);
+      }
+      currentPage.value = 1;
+    } else {
+      console.log(scanRes.msg);
+      ElMessage({
+        message: `发生了错误： ${scanRes.msg}`,
+        type: "error",
+        duration: 1800,
+      });
+    }
+  });
+};
+
+const selectFolder = async () => {
+  const res = await window.electron.apis.selectFolder();
+  if (res.success && res.data) {
+    selectedPath.value = res.data;
+    setLocal("SELECTED_PATH", res.data);
+    scanProjects(res.data);
+  }
+};
+
+watch([currentPage, pageSize], ([_currentPage, _pageSize], [, prePageSize]) => {
+  if (_pageSize !== prePageSize) {
+    setLocal("PAGE_SIZE", _pageSize);
+    if (_currentPage !== 1) {
+      // pageSize 发生变化时需要重置 currentPage，重置后会触发下一轮 watch
+      currentPage.value = 1;
+      return;
+    }
+  }
+  getProjects(selectedPath.value, _currentPage, _pageSize);
 });
+
+getProjects(selectedPath.value, currentPage.value, pageSize.value);
 </script>
 
 <template>
   <div class="folder-line">
     <ElButton :size="'small'" @click="selectFolder">选择文件夹</ElButton>
-    <span>path:{{ selectedPath }}</span>
-    <span v-loading="isLoading"></span>
+    <div class="folder-path">
+      <span>{{ selectedPath }}</span>
+      <span v-loading="isLoading">&nbsp;&nbsp;</span>
+    </div>
+    <ElButton
+      size="small"
+      @click="() => scanProjects(selectedPath)"
+      v-show="selectedPath"
+      >重新同步</ElButton
+    >
+    <span>&nbsp;&nbsp;</span>
+    <ElCheckbox
+      size="small"
+      v-model="dynamicPageSize"
+      label="动态条数"
+      border
+    />
   </div>
   <div class="pagination-line">
     <ElPagination
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
-      :total="projects.length"
+      :total="pageTotal"
       background
       layout="prev, pager, next, total, sizes"
     />
   </div>
   <div class="pic-box">
-    <div
-      v-for="(project, index) in projectsPageList"
-      :key="index"
-      class="pic-item"
-    >
+    <div v-for="(project, index) in projects" :key="index" class="pic-item">
       <img
         class="img"
         :src="projectImgs[index]"
         alt=""
         :style="{ opacity: projectImgs[index] ? 1 : 0 }"
         @click="openFile(project)"
+        onerror="this.classList.add('error');"
       />
-      <p>{{ project.title }}</p>
+      <p :title="project.title">{{ project.title }}</p>
     </div>
     <div v-for="i in 20" :key="i" class="pic-item" style="margin-top: 0"></div>
   </div>
@@ -114,7 +167,7 @@ watch(projectsPageList, () => {
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
-      :total="projects.length"
+      :total="pageTotal"
       background
       layout="prev, pager, next, total, sizes"
     />
@@ -124,8 +177,13 @@ watch(projectsPageList, () => {
 <style scoped lang="less">
 .folder-line {
   padding: 20px 20px 0 20px;
-  span {
+  display: flex;
+  align-items: center;
+  .folder-path {
+    flex: 1;
+    line-height: 32px;
     margin-left: 10px;
+    padding-right: 50px;
   }
 }
 .pagination-line {
@@ -142,6 +200,11 @@ watch(projectsPageList, () => {
     width: 200px;
     p {
       margin: 0;
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   }
   .img {
@@ -150,6 +213,21 @@ watch(projectsPageList, () => {
     object-fit: contain;
     cursor: pointer;
     transition: opacity 500ms;
+    &.error {
+      display: inline-block;
+      transform: scale(1);
+      content: "";
+      color: transparent;
+    }
+    &.error::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: #f5f5f5 no-repeat center / 50% 50%;
+    }
   }
 }
 </style>
