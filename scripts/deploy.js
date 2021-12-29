@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 // const inquirer = require("inquirer");
 const ghpages = require("gh-pages");
-const chalk = require("react-dev-utils/chalk");
+const chalk = require("chalk");
 
 const repo = require("../package.json").repository.url;
 const branch = process.argv[2];
