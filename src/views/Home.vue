@@ -41,6 +41,7 @@ const syncLoadImg = async (_projects: Project[]) => {
   for (const [index, project] of _projects.entries()) {
     const base64data = await getImg(project);
     projectImgs.value.splice(index, 1, base64data);
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 };
 const openFile = (_project: Project) => {
@@ -152,15 +153,14 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
     <div v-for="(project, index) in projects" :key="index" class="pic-item">
       <img
         class="img"
-        :src="projectImgs[index]"
         alt=""
-        :style="{ opacity: projectImgs[index] ? 1 : 0 }"
+        :class="projectImgs[index] ? 'loaded' : ''"
+        :src="projectImgs[index]"
         @click="openFile(project)"
-        onerror="this.classList.add('error');"
       />
       <p :title="project.title">{{ project.title }}</p>
     </div>
-    <div v-for="i in 20" :key="i" class="pic-item" style="margin-top: 0"></div>
+    <div v-for="i in 10" :key="i" class="pic-item" style="margin-top: 0"></div>
   </div>
   <div class="pagination-line">
     <ElPagination
@@ -199,6 +199,7 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
     margin: 20px 0 0 20px;
     width: 200px;
     p {
+      min-height: 45px;
       margin: 0;
       word-break: break-all;
       display: -webkit-box;
@@ -212,21 +213,13 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
     width: 200px;
     object-fit: contain;
     cursor: pointer;
-    transition: opacity 500ms;
-    &.error {
-      display: inline-block;
-      transform: scale(1);
-      content: "";
-      color: transparent;
+    transition: 200ms;
+    clip-path: inset(0 200px 200px 0);
+    &:hover {
+      transform: scale(1.1);
     }
-    &.error::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: #f5f5f5 no-repeat center / 50% 50%;
+    &.loaded {
+      clip-path: inset(0 0 0 0);
     }
   }
 }
