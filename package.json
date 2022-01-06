@@ -6,14 +6,13 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build && node scripts/deploy.js release",
+    "build": "vue-tsc --noEmit && vite build",
+    "deploy": "npm run build && node scripts/deploy.js release",
     "serve": "vite preview"
   },
   "dependencies": {
-    "element-plus": "^1.1.0-beta.24",
-    "unplugin-vue-components": "^0.16.0",
-    "vue": "^3.2.16",
-    "vue-composable": "^1.0.0-beta.24"
+    "element-plus": "^1.3.0-beta.1",
+    "vue": "^3.2.16"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.0.0",
@@ -31,6 +30,8 @@
     "lint-staged": "^11.2.3",
     "prettier": "^2.4.1",
     "typescript": "^4.4.3",
+    "unplugin-auto-import": "^0.5.5",
+    "unplugin-vue-components": "^0.17.11",
     "vite": "^2.6.4",
     "vue-tsc": "^0.3.0"
   },

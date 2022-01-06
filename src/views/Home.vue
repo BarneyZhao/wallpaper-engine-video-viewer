@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { ElButton, ElPagination, ElMessage, ElCheckbox } from "element-plus";
-import "element-plus/es/components/button/style/css";
-import "element-plus/es/components/pagination/style/css";
-import "element-plus/es/components/message/style/css";
-import "element-plus/es/components/checkbox/style/css";
+import { ElMessage } from "element-plus";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal } from "../utils";
