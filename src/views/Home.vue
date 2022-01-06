@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { ElMessage } from "element-plus";
+import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal } from "../utils";
@@ -23,10 +24,10 @@ const pageTotal = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(getLocal<number>("PAGE_SIZE") || DEFAULT_PAGE_SIZE);
 const projectImgs = ref<string[]>([]);
-const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
+// const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
 const getFilePath = (projectFolder: string, file: string) => {
-  return `${selectedPath.value + projectFolder}/${file}`;
+  return `${selectedPath.value}/${projectFolder}/${file}`;
 };
 const getImg = (_project: Project) => {
   return window.electron.getImg(
@@ -70,9 +71,10 @@ const scanProjects = async (_path: string) => {
 
     if (scanRes.success) {
       ElMessage({
+        showClose: true,
         message: `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`,
         type: "success",
-        duration: 1500,
+        duration: 2500,
       });
       if (currentPage.value === 1) {
         // currentPage 本来就是 1，无法触发 watch，故手动调用
@@ -82,9 +84,10 @@ const scanProjects = async (_path: string) => {
     } else {
       console.log(scanRes.msg);
       ElMessage({
+        showClose: true,
         message: `发生了错误： ${scanRes.msg}`,
         type: "error",
-        duration: 1800,
+        duration: 2500,
       });
     }
   });
@@ -121,11 +124,11 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
       <span>{{ selectedPath }}</span>
       <span v-loading="isLoading">&nbsp;&nbsp;</span>
     </div>
-    <ElButton @click="() => scanProjects(selectedPath)" v-show="selectedPath"
-      >重新同步</ElButton
-    >
+    <ElButton @click="() => scanProjects(selectedPath)" v-show="selectedPath">
+      重新同步
+    </ElButton>
     <span>&nbsp;&nbsp;</span>
-    <ElCheckbox v-model="dynamicPageSize" label="动态条数" border />
+    <!-- <ElCheckbox v-model="dynamicPageSize" label="动态条数" border /> -->
   </div>
   <div class="pagination-line">
     <ElPagination
