@@ -116,24 +116,16 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
 
 <template>
   <div class="folder-line">
-    <ElButton :size="'small'" @click="selectFolder">选择文件夹</ElButton>
+    <ElButton @click="selectFolder">选择文件夹</ElButton>
     <div class="folder-path">
       <span>{{ selectedPath }}</span>
       <span v-loading="isLoading">&nbsp;&nbsp;</span>
     </div>
-    <ElButton
-      size="small"
-      @click="() => scanProjects(selectedPath)"
-      v-show="selectedPath"
+    <ElButton @click="() => scanProjects(selectedPath)" v-show="selectedPath"
       >重新同步</ElButton
     >
     <span>&nbsp;&nbsp;</span>
-    <ElCheckbox
-      size="small"
-      v-model="dynamicPageSize"
-      label="动态条数"
-      border
-    />
+    <ElCheckbox v-model="dynamicPageSize" label="动态条数" border />
   </div>
   <div class="pagination-line">
     <ElPagination
@@ -150,7 +142,6 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
       <img
         class="img"
         alt=""
-        :class="projectImgs[index] ? 'loaded' : ''"
         :src="projectImgs[index]"
         @click="openFile(project)"
       />
@@ -195,7 +186,8 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
     margin: 20px 0 0 20px;
     width: 200px;
     p {
-      min-height: 45px;
+      height: 44px;
+      line-height: 22px;
       margin: 0;
       word-break: break-all;
       display: -webkit-box;
@@ -209,13 +201,20 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
     width: 200px;
     object-fit: contain;
     cursor: pointer;
-    transition: 200ms;
-    clip-path: inset(0 200px 200px 0);
+    display: inline-block;
+    transform: scale(1);
+    transition: transform 200ms;
     &:hover {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
-    &.loaded {
-      clip-path: inset(0 0 0 0);
+    &:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: #f5f5f5 no-repeat center / 50% 50%;
     }
   }
 }
