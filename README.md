@@ -1,3 +1,11 @@
+# 介绍
+
+专门用于浏览`wallpaper-engine`视频文件，单击直接使用系统默认播放器打开。
+
+# 使用方法
+
+需要配合`Electron`基座使用，[下载地址](https://github.com/BarneyZhao/wallpaper-engine-video-viewer/releases)，基座中配置了此项目的[gh-pages](https://barneyzhao.github.io/wallpaper-engine-video-viewer/)地址。
+
 # Vue 3 + Typescript + Vite
 
 This template should help get you started developing with Vue 3 and Typescript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
