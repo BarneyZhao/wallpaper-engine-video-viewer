@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import {
+  CirclePlus,
+  CircleCheck,
+  Refresh,
+  Sort,
+} from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
-import { getLocal, setLocal } from "../utils";
+import { getLocal, setLocal, getSizeDesc } from "../utils";
 
 // defineProps<{ msg?: string }>();
 
 interface Project {
   project_folder: string;
   file: string;
+  file_size: number;
   preview: string;
   title: string;
 }
@@ -20,10 +27,12 @@ console.log(window.electron);
 const isLoading = ref(false);
 const selectedPath = ref(getLocal<string>("SELECTED_PATH") || "");
 const projects = ref<Project[]>([]);
-const pageTotal = ref(0);
+const projectTotal = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(getLocal<number>("PAGE_SIZE") || DEFAULT_PAGE_SIZE);
 const projectImgs = ref<string[]>([]);
+const orderBy = ref(getLocal<string>("ORDER_BY") || "create_time"); // file_size
+const orderType = ref(getLocal<string>("ORDER_TYPE") || "DESC"); // ASC
 // const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
 const getFilePath = (projectFolder: string, file: string) => {
@@ -46,16 +55,27 @@ const openFile = (_project: Project) => {
     getFilePath(_project.project_folder, _project.file)
   );
 };
-const getProjects = async (_path: string, _page: number, _pageSize: number) => {
-  if (!_path) return;
+const openFileFolder = (_project: Project) => {
+  window.electron.apis.openFileFolder(
+    `${selectedPath.value}/${_project.project_folder}`
+  );
+};
+const getProjects = async (_page: number, _pageSize: number) => {
+  if (!selectedPath.value) return;
   window.electron.apis
-    .getProjectsByPage(_path, _page, _pageSize)
+    .getProjectsByPage(
+      selectedPath.value,
+      orderBy.value,
+      orderType.value,
+      _page,
+      _pageSize
+    )
     .then((res: any) => {
       console.log("getProjects res", res);
       const list = res.data.list;
 
       projects.value = list;
-      pageTotal.value = res.data.total;
+      projectTotal.value = res.data.total;
       projectImgs.value = new Array(list.length).fill(undefined);
       syncLoadImg(list);
     });
@@ -78,7 +98,7 @@ const scanProjects = async (_path: string) => {
       });
       if (currentPage.value === 1) {
         // currentPage 本来就是 1，无法触发 watch，故手动调用
-        getProjects(selectedPath.value, 1, pageSize.value);
+        getProjects(1, pageSize.value);
       }
       currentPage.value = 1;
     } else {
@@ -102,6 +122,22 @@ const selectFolder = async () => {
   }
 };
 
+const orderTypeChange = () => {
+  orderType.value = orderType.value === "ASC" ? "DESC" : "ASC";
+};
+
+document.addEventListener("keydown", (e) => {
+  if (["ArrowLeft", "KeyA"].includes(e.code)) {
+    // prev
+    if (currentPage.value > 1) currentPage.value -= 1;
+  } else if (["ArrowRight", "KeyD"].includes(e.code)) {
+    // next
+    if (currentPage.value < Math.ceil(projectTotal.value / pageSize.value)) {
+      currentPage.value += 1;
+    }
+  }
+});
+
 watch([currentPage, pageSize], ([_currentPage, _pageSize], [, prePageSize]) => {
   if (_pageSize !== prePageSize) {
     setLocal("PAGE_SIZE", _pageSize);
@@ -111,31 +147,67 @@ watch([currentPage, pageSize], ([_currentPage, _pageSize], [, prePageSize]) => {
       return;
     }
   }
-  getProjects(selectedPath.value, _currentPage, _pageSize);
+  getProjects(_currentPage, _pageSize);
 });
 
-getProjects(selectedPath.value, currentPage.value, pageSize.value);
+watch([orderBy, orderType], ([_orderBy, _orderType]) => {
+  setLocal("ORDER_BY", _orderBy);
+  setLocal("ORDER_TYPE", _orderType);
+  getProjects(currentPage.value, pageSize.value);
+});
+
+getProjects(currentPage.value, pageSize.value);
 </script>
 
 <template>
   <div class="folder-line">
-    <ElButton @click="selectFolder">选择文件夹</ElButton>
-    <div class="folder-path">
-      <span>{{ selectedPath }}</span>
-      <span v-loading="isLoading">&nbsp;&nbsp;</span>
-    </div>
-    <ElButton @click="() => scanProjects(selectedPath)" v-show="selectedPath">
-      重新同步
-    </ElButton>
-    <span>&nbsp;&nbsp;</span>
-    <!-- <ElCheckbox v-model="dynamicPageSize" label="动态条数" border /> -->
+    <ElTooltip
+      placement="bottom"
+      :content="selectedPath"
+      :disabled="!selectedPath"
+    >
+      <ElButton @click="selectFolder" :loading="isLoading">
+        <ElIcon v-show="!isLoading" style="margin-right: 6px">
+          <CirclePlus v-show="!selectedPath" />
+          <CircleCheck v-show="selectedPath" color="#67C23A" />
+        </ElIcon>
+        <slot>选择文件夹</slot>
+      </ElButton>
+    </ElTooltip>
+    <template v-if="selectedPath">
+      <ElButton
+        @click="() => scanProjects(selectedPath)"
+        :icon="Refresh"
+        :loading="isLoading"
+      >
+        重新同步
+      </ElButton>
+      <span class="order-explain">根据</span>
+      <ElSelect
+        v-model="orderBy"
+        :loading="isLoading"
+        style="margin-left: 12px; width: 120px"
+      >
+        <ElOption label="创建时间" value="create_time" />
+        <ElOption label="文件大小" value="file_size" />
+      </ElSelect>
+      <ElButton
+        @click="orderTypeChange"
+        :icon="Sort"
+        :loading="isLoading"
+        style="margin-left: 12px"
+      >
+        {{ orderType === "DESC" ? "降序" : "升序" }}
+      </ElButton>
+      <!-- <ElCheckbox v-model="dynamicPageSize" label="动态条数" border /> -->
+    </template>
   </div>
   <div class="pagination-line">
     <ElPagination
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
-      :total="pageTotal"
+      :total="projectTotal"
       background
       layout="prev, pager, next, total, sizes"
     />
@@ -147,8 +219,11 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
         alt=""
         :src="projectImgs[index]"
         @click="openFile(project)"
+        @contextmenu="openFileFolder(project)"
       />
-      <p :title="project.title">{{ project.title }}</p>
+      <p :title="project.title">
+        [{{ getSizeDesc(project.file_size) }}]&nbsp;{{ project.title }}
+      </p>
     </div>
     <div v-for="i in 10" :key="i" class="pic-item" style="margin-top: 0"></div>
   </div>
@@ -157,7 +232,7 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
       v-model:currentPage="currentPage"
       v-model:page-size="pageSize"
       :page-sizes="SIZES"
-      :total="pageTotal"
+      :total="projectTotal"
       background
       layout="prev, pager, next, total, sizes"
     />
@@ -169,11 +244,19 @@ getProjects(selectedPath.value, currentPage.value, pageSize.value);
   padding: 20px 20px 0 20px;
   display: flex;
   align-items: center;
-  .folder-path {
-    flex: 1;
-    line-height: 32px;
-    margin-left: 10px;
-    padding-right: 50px;
+  .order-explain {
+    font-size: 14px;
+    margin-left: 20px;
+    position: relative;
+    &::before {
+      content: "";
+      position: absolute;
+      left: -8px;
+      top: 0;
+      height: 20px;
+      width: 2px;
+      background-color: #dcdfe6;
+    }
   }
 }
 .pagination-line {
