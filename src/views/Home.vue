@@ -6,11 +6,18 @@ import {
   Refresh,
   Sort,
 } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
-import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal, getSizeDesc } from "../utils";
+import {
+  hintAndLogSuccess,
+  hintAndLogErr,
+  openFileOrFolder,
+  getProjectsByPage,
+  scanProjectsToDb,
+  selectFolder,
+  getImg,
+} from "../services";
 
 // defineProps<{ msg?: string }>();
 
@@ -21,8 +28,6 @@ interface Project {
   preview: string;
   title: string;
 }
-
-console.log(window.electron);
 
 const isLoading = ref(false);
 const selectedPath = ref(getLocal<string>("SELECTED_PATH") || "");
@@ -38,92 +43,73 @@ const orderType = ref(getLocal<string>("ORDER_TYPE") || "DESC"); // ASC
 const getFilePath = (projectFolder: string, file: string) => {
   return `${selectedPath.value}/${projectFolder}/${file}`;
 };
-const getImg = (_project: Project) => {
-  return window.electron.getImg(
-    getFilePath(_project.project_folder, _project.preview)
-  );
-};
+
 const syncLoadImg = async (_projects: Project[]) => {
-  for (const [index, project] of _projects.entries()) {
-    const base64data = await getImg(project);
+  for (const [index, { project_folder, preview }] of _projects.entries()) {
+    const base64data = await getImg(getFilePath(project_folder, preview));
     projectImgs.value.splice(index, 1, base64data);
     // await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 };
-const openFile = (_project: Project) => {
-  window.electron.apis.openFile(
-    getFilePath(_project.project_folder, _project.file)
-  );
-};
-const openFileFolder = (_project: Project) => {
-  window.electron.apis.openFileFolder(
-    `${selectedPath.value}/${_project.project_folder}`
-  );
-};
+
 const getProjects = async (_page: number, _pageSize: number) => {
   if (!selectedPath.value) return;
-  window.electron.apis
-    .getProjectsByPage(
-      selectedPath.value,
-      orderBy.value,
-      orderType.value,
-      _page,
-      _pageSize
-    )
-    .then((res: any) => {
-      console.log("getProjects res", res);
-      const list = res.data.list;
+  getProjectsByPage(
+    selectedPath.value,
+    orderBy.value,
+    orderType.value,
+    _page,
+    _pageSize
+  ).then((res) => {
+    const list = res.data.list;
 
-      projects.value = list;
-      projectTotal.value = res.data.total;
-      projectImgs.value = new Array(list.length).fill(undefined);
-      syncLoadImg(list);
-    });
+    projects.value = list;
+    projectTotal.value = res.data.total;
+    projectImgs.value = new Array(list.length).fill(undefined);
+    syncLoadImg(list);
+  });
 };
+
 const scanProjects = async (_path: string) => {
   isLoading.value = true;
   const timePromise = new Promise((resolve) => setTimeout(resolve, 500));
-  const scanRes = await window.electron.apis.scanProjectsToDb(_path);
+  const scanRes = await scanProjectsToDb(_path);
 
   timePromise.then(() => {
     isLoading.value = false;
-    console.log("scanRes", scanRes);
-
     if (scanRes.success) {
-      ElMessage({
-        showClose: true,
-        message: `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`,
-        type: "success",
-        duration: 2500,
-      });
+      hintAndLogSuccess(
+        `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`
+      );
       if (currentPage.value === 1) {
         // currentPage 本来就是 1，无法触发 watch，故手动调用
         getProjects(1, pageSize.value);
       }
       currentPage.value = 1;
     } else {
-      console.log(scanRes.msg);
-      ElMessage({
-        showClose: true,
-        message: `发生了错误： ${scanRes.msg}`,
-        type: "error",
-        duration: 2500,
-      });
+      hintAndLogErr(`发生了错误： ${scanRes.msg}`);
     }
   });
 };
 
-const selectFolder = async () => {
-  const res = await window.electron.apis.selectFolder();
+const selectFolderPath = async () => {
+  isLoading.value = true;
+  const res = await selectFolder();
   if (res.success && res.data) {
     selectedPath.value = res.data;
     setLocal("SELECTED_PATH", res.data);
     scanProjects(res.data);
+  } else {
+    isLoading.value = false;
   }
 };
 
 const orderTypeChange = () => {
   orderType.value = orderType.value === "ASC" ? "DESC" : "ASC";
+};
+
+const picItemClick = ({ project_folder, file }: Project, folder?: boolean) => {
+  openFileOrFolder(getFilePath(project_folder, file), folder);
 };
 
 document.addEventListener("keydown", (e) => {
@@ -138,23 +124,33 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-watch([currentPage, pageSize], ([_currentPage, _pageSize], [, prePageSize]) => {
-  if (_pageSize !== prePageSize) {
-    setLocal("PAGE_SIZE", _pageSize);
-    if (_currentPage !== 1) {
-      // pageSize 发生变化时需要重置 currentPage，重置后会触发下一轮 watch
+watch(
+  [currentPage, pageSize, orderBy, orderType],
+  (
+    [_currentPage, _pageSize, _orderBy, _orderType],
+    [, prePageSize, preOrderBy, preOrderType]
+  ) => {
+    let isResetPage = false;
+    if (_pageSize !== prePageSize) {
+      setLocal("PAGE_SIZE", _pageSize);
+      isResetPage = true;
+    }
+    if (_orderBy !== preOrderBy) {
+      setLocal("ORDER_BY", _orderBy);
+      isResetPage = true;
+    }
+    if (_orderType !== preOrderType) {
+      setLocal("ORDER_TYPE", _orderType);
+      isResetPage = true;
+    }
+    if (isResetPage && _currentPage !== 1) {
+      // pageSize, orderBy, orderType 发生变化时需要重置 currentPage，重置后会触发下一轮 watch
       currentPage.value = 1;
       return;
     }
+    getProjects(_currentPage, _pageSize);
   }
-  getProjects(_currentPage, _pageSize);
-});
-
-watch([orderBy, orderType], ([_orderBy, _orderType]) => {
-  setLocal("ORDER_BY", _orderBy);
-  setLocal("ORDER_TYPE", _orderType);
-  getProjects(currentPage.value, pageSize.value);
-});
+);
 
 getProjects(currentPage.value, pageSize.value);
 </script>
@@ -166,7 +162,7 @@ getProjects(currentPage.value, pageSize.value);
       :content="selectedPath"
       :disabled="!selectedPath"
     >
-      <ElButton @click="selectFolder" :loading="isLoading">
+      <ElButton @click="selectFolderPath" :loading="isLoading">
         <ElIcon v-show="!isLoading" style="margin-right: 6px">
           <CirclePlus v-show="!selectedPath" />
           <CircleCheck v-show="selectedPath" color="#67C23A" />
@@ -218,8 +214,8 @@ getProjects(currentPage.value, pageSize.value);
         class="img"
         alt=""
         :src="projectImgs[index]"
-        @click="openFile(project)"
-        @contextmenu="openFileFolder(project)"
+        @click="picItemClick(project)"
+        @contextmenu="picItemClick(project, true)"
       />
       <p :title="project.title">
         [{{ getSizeDesc(project.file_size) }}]&nbsp;{{ project.title }}

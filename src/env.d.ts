@@ -11,3 +11,5 @@ interface Window {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   electron: { apis: any; getImg: (path: string) => Promise<string> };
 }
+
+declare const __APP_VERSION__: string;
