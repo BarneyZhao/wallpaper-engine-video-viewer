@@ -1,54 +1,61 @@
-import { ElMessage } from "element-plus";
+import { ElMessage, ElNotification } from "element-plus";
+import "element-plus/es/components/message/style/css";
+import "element-plus/es/components/notification/style/css";
 
-const appVersion = __APP_VERSION__;
+const specifyElectronVersion = "1.1.1"; // 指定 electron 基座的版本
 const isElectron = Boolean(window.electron);
-const electronAppVersionPromise: Promise<any> = isElectron
-  ? window.electron.apis.getAppVersion()
-  : new Promise((r) => r(""));
 
-export const hintAndLogSuccess = (message: string) => {
-  ElMessage({
-    showClose: true,
-    message,
-    type: "success",
-    duration: 2500,
-  });
-  console.log(message);
+const checkEnvAndVersion = async () => {
+  if (!isElectron) {
+    return;
+  }
+  const electronVersion = (await window.electron.apis.getAppVersion()).data;
+  console.log("ELECTRON_VERSION", electronVersion);
+
+  if (specifyElectronVersion !== electronVersion) {
+    ElNotification({
+      title: `有新的版本(${specifyElectronVersion})可用，建议更新`,
+      dangerouslyUseHTMLString: true,
+      message: `当前版本：${electronVersion}`,
+      position: "bottom-right",
+      duration: 0,
+    });
+  }
 };
-export const hintAndLogErr = (message: string) => {
+checkEnvAndVersion();
+
+export const hintAndLogErr = (message: string | undefined) => {
   ElMessage({
     showClose: true,
     message,
     type: "error",
-    duration: 2500,
+    duration: 0,
   });
-  console.error(message);
-};
-
-const checkEnvAndVersion = async () => {
-  if (!isElectron) {
-    hintAndLogErr("当前非 Electron 环境，接口不可用");
-    return false;
-  }
-  const electronVersion = (await electronAppVersionPromise).data;
-  if (appVersion !== electronVersion) {
-    hintAndLogErr(
-      `前端版本(${appVersion})和基座版本(${electronVersion})不匹配`
-    );
-    return false;
-  }
-  return true;
+  console.error(message || "出错了");
 };
 
 const invokeApi = async (funcKey: string, ...arg: unknown[]) => {
-  if (!(await checkEnvAndVersion())) {
-    return;
+  if (!isElectron) {
+    hintAndLogErr("当前非 Electron 环境，应用无法调用接口");
+    return {
+      success: false,
+    } as ApiResponse;
   }
   console.log(`request: ${funcKey}`, arg);
-  return window.electron.apis[funcKey](...arg).then((r: unknown) => {
-    console.log(`response:`, r);
-    return r;
-  });
+  return window.electron.apis[funcKey](...arg)
+    .then((r) => {
+      console.log(`response:`, r);
+      if (!r.success) {
+        hintAndLogErr(r.message);
+        console.error(r.message);
+      }
+      return r;
+    })
+    .catch((e) => {
+      hintAndLogErr("接口出错了");
+      console.error(e);
+      return { success: false } as ApiResponse;
+    });
 };
 
 export const openFileOrFolder = (...arg: unknown[]) =>
@@ -64,7 +71,7 @@ export const selectFolder = (...arg: unknown[]) =>
   invokeApi("selectFolder", ...arg);
 
 export const getImg = async (path: string) => {
-  if (!(await checkEnvAndVersion())) {
+  if (!isElectron) {
     return "";
   }
   return window.electron.getImg(path);

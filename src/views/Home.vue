@@ -6,12 +6,12 @@ import {
   Refresh,
   Sort,
 } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal, getSizeDesc } from "../utils";
 import {
-  hintAndLogSuccess,
-  hintAndLogErr,
   openFileOrFolder,
   getProjectsByPage,
   scanProjectsToDb,
@@ -54,20 +54,21 @@ const syncLoadImg = async (_projects: Project[]) => {
 
 const getProjects = async (_page: number, _pageSize: number) => {
   if (!selectedPath.value) return;
-  getProjectsByPage(
+  const res = await getProjectsByPage(
     selectedPath.value,
     orderBy.value,
     orderType.value,
     _page,
     _pageSize
-  ).then((res) => {
+  );
+  if (res.success && res.data) {
     const list = res.data.list;
 
     projects.value = list;
     projectTotal.value = res.data.total;
     projectImgs.value = new Array(list.length).fill(undefined);
     syncLoadImg(list);
-  });
+  }
 };
 
 const scanProjects = async (_path: string) => {
@@ -77,17 +78,20 @@ const scanProjects = async (_path: string) => {
 
   timePromise.then(() => {
     isLoading.value = false;
-    if (scanRes.success) {
-      hintAndLogSuccess(
-        `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`
-      );
+    if (scanRes.success && scanRes.data) {
+      const message = `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`;
+      ElMessage({
+        showClose: true,
+        message,
+        type: "success",
+        duration: 3000,
+      });
+      console.log(message);
       if (currentPage.value === 1) {
         // currentPage 本来就是 1，无法触发 watch，故手动调用
         getProjects(1, pageSize.value);
       }
       currentPage.value = 1;
-    } else {
-      hintAndLogErr(`发生了错误： ${scanRes.msg}`);
     }
   });
 };
