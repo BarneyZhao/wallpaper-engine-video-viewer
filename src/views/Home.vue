@@ -54,6 +54,7 @@ const syncLoadImg = async (_projects: Project[]) => {
 
 const getProjects = async (_page: number, _pageSize: number) => {
   if (!selectedPath.value) return;
+  window.scrollTo(0, 0);
   const res = await getProjectsByPage(
     selectedPath.value,
     orderBy.value,
