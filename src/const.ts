@@ -4,3 +4,5 @@
 export const DEFAULT_PAGE_SIZE = 20;
 
 export const SIZES = [10, 20, 30, 40, 50];
+
+export const specifyElectronVersion = "1.1.1"; // 指定 electron 基座的版本

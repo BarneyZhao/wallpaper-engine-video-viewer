@@ -2,7 +2,8 @@ import { ElMessage, ElNotification } from "element-plus";
 import "element-plus/es/components/message/style/css";
 import "element-plus/es/components/notification/style/css";
 
-const specifyElectronVersion = "1.1.1"; // 指定 electron 基座的版本
+import { specifyElectronVersion } from "./const";
+
 const isElectron = Boolean(window.electron);
 
 const checkEnvAndVersion = async () => {
@@ -37,6 +38,13 @@ export const hintAndLogErr = (message: string | undefined) => {
 const invokeApi = async (funcKey: string, ...arg: unknown[]) => {
   if (!isElectron) {
     hintAndLogErr("当前非 Electron 环境，应用无法调用接口");
+    return {
+      success: false,
+    } as ApiResponse;
+  }
+  if (!window.electron.apis[funcKey]) {
+    hintAndLogErr(`Electron 接口[${funcKey}]不存在，请确认版本`);
+    checkEnvAndVersion();
     return {
       success: false,
     } as ApiResponse;
