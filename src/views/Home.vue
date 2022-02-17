@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Refresh,
   Sort,
+  Search,
 } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import "element-plus/es/components/message/style/css";
@@ -38,6 +39,8 @@ const pageSize = ref(getLocal<number>("PAGE_SIZE") || DEFAULT_PAGE_SIZE);
 const projectImgs = ref<string[]>([]);
 const orderBy = ref(getLocal<string>("ORDER_BY") || "create_time"); // file_size
 const orderType = ref(getLocal<string>("ORDER_TYPE") || "DESC"); // ASC
+const inputTitle = ref("");
+const queryTitle = ref("");
 // const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
 const getFilePath = (projectFolder: string, file: string) => {
@@ -52,7 +55,7 @@ const syncLoadImg = async (_projects: Project[]) => {
   }
 };
 
-const getProjects = async (_page: number, _pageSize: number) => {
+const getProjects = async (_page: number) => {
   if (!selectedPath.value) return;
   window.scrollTo(0, 0);
   const res = await getProjectsByPage(
@@ -60,7 +63,8 @@ const getProjects = async (_page: number, _pageSize: number) => {
     orderBy.value,
     orderType.value,
     _page,
-    _pageSize
+    pageSize.value,
+    queryTitle.value
   );
   if (res.success && res.data) {
     const list = res.data.list;
@@ -90,7 +94,7 @@ const scanProjects = async (_path: string) => {
       console.log(message);
       if (currentPage.value === 1) {
         // currentPage 本来就是 1，无法触发 watch，故手动调用
-        getProjects(1, pageSize.value);
+        getProjects(1);
       }
       currentPage.value = 1;
     }
@@ -118,10 +122,10 @@ const picItemClick = ({ project_folder, file }: Project, folder?: boolean) => {
 };
 
 document.addEventListener("keydown", (e) => {
-  if (["ArrowLeft", "KeyA"].includes(e.code)) {
+  if (["ArrowLeft" /**, "KeyA" */].includes(e.code)) {
     // prev
     if (currentPage.value > 1) currentPage.value -= 1;
-  } else if (["ArrowRight", "KeyD"].includes(e.code)) {
+  } else if (["ArrowRight" /**, "KeyD" */].includes(e.code)) {
     // next
     if (currentPage.value < Math.ceil(projectTotal.value / pageSize.value)) {
       currentPage.value += 1;
@@ -130,34 +134,37 @@ document.addEventListener("keydown", (e) => {
 });
 
 watch(
-  [currentPage, pageSize, orderBy, orderType],
+  [pageSize, orderBy, orderType, queryTitle],
   (
-    [_currentPage, _pageSize, _orderBy, _orderType],
-    [, prePageSize, preOrderBy, preOrderType]
+    [_pageSize, _orderBy, _orderType /**, _queryTitle */],
+    [prePageSize, preOrderBy, preOrderType /**, preQueryTitle */]
   ) => {
-    let isResetPage = false;
     if (_pageSize !== prePageSize) {
       setLocal("PAGE_SIZE", _pageSize);
-      isResetPage = true;
     }
     if (_orderBy !== preOrderBy) {
       setLocal("ORDER_BY", _orderBy);
-      isResetPage = true;
     }
     if (_orderType !== preOrderType) {
       setLocal("ORDER_TYPE", _orderType);
-      isResetPage = true;
     }
-    if (isResetPage && _currentPage !== 1) {
-      // pageSize, orderBy, orderType 发生变化时需要重置 currentPage，重置后会触发下一轮 watch
+    // if (_queryTitle !== preQueryTitle) {
+    // }
+    if (currentPage.value !== 1) {
+      // 监听字段发生变化时需要重置 currentPage，重置后会触发 currentPage watch
       currentPage.value = 1;
       return;
     }
-    getProjects(_currentPage, _pageSize);
+    getProjects(currentPage.value);
   }
 );
 
-getProjects(currentPage.value, pageSize.value);
+watch([currentPage], ([_currentPage]) => {
+  getProjects(_currentPage);
+});
+
+// 初始化查询
+getProjects(currentPage.value);
 </script>
 
 <template>
@@ -200,6 +207,15 @@ getProjects(currentPage.value, pageSize.value);
       >
         {{ orderType === "DESC" ? "降序" : "升序" }}
       </ElButton>
+      <ElInput
+        v-model="inputTitle"
+        placeholder="输入名称"
+        style="margin-left: 12px; width: 200px"
+      >
+        <template #append>
+          <ElButton :icon="Search" @click="queryTitle = inputTitle" />
+        </template>
+      </ElInput>
       <!-- <ElCheckbox v-model="dynamicPageSize" label="动态条数" border /> -->
     </template>
   </div>
@@ -210,9 +226,10 @@ getProjects(currentPage.value, pageSize.value);
       :page-sizes="SIZES"
       :total="projectTotal"
       background
-      layout="prev, pager, next, total, sizes"
+      layout="total, sizes, prev, pager, next"
     />
   </div>
+  <ElEmpty v-if="projects.length === 0" description="什么都没有~"></ElEmpty>
   <div class="pic-box">
     <div v-for="(project, index) in projects" :key="index" class="pic-item">
       <img
@@ -235,7 +252,7 @@ getProjects(currentPage.value, pageSize.value);
       :page-sizes="SIZES"
       :total="projectTotal"
       background
-      layout="prev, pager, next, total, sizes"
+      layout="total, sizes, prev, pager, next"
     />
   </div>
 </template>
@@ -262,7 +279,9 @@ getProjects(currentPage.value, pageSize.value);
 }
 .pagination-line {
   padding: 20px 20px 0 20px;
-  text-align: center;
+  .el-pagination {
+    justify-content: center;
+  }
 }
 .pic-box {
   display: flex;

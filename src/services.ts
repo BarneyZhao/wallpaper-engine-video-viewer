@@ -1,3 +1,4 @@
+import { gt } from "semver";
 import { ElMessage, ElNotification } from "element-plus";
 import "element-plus/es/components/message/style/css";
 import "element-plus/es/components/notification/style/css";
@@ -10,10 +11,12 @@ const checkEnvAndVersion = async () => {
   if (!isElectron) {
     return;
   }
-  const electronVersion = (await window.electron.apis.getAppVersion()).data;
+  const electronVersion = (await window.electron.apis.getAppVersion())
+    .data as string;
   console.log("ELECTRON_VERSION", electronVersion);
 
-  if (specifyElectronVersion !== electronVersion) {
+  // 若前端指定的版本 大于 基座版本
+  if (gt(specifyElectronVersion, electronVersion)) {
     ElNotification({
       title: `有新的版本(${specifyElectronVersion})可用，建议更新`,
       dangerouslyUseHTMLString: true,

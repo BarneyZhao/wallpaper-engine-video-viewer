@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
+import { Resolver } from "unplugin-auto-import/dist/types";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
@@ -13,7 +14,7 @@ export default defineConfig({
   plugins: [
     vue(),
     AutoImport({
-      resolvers: [ElementPlusResolver() as any],
+      resolvers: [ElementPlusResolver() as Resolver[]],
     }),
     Components({
       resolvers: [ElementPlusResolver()],
