@@ -10,8 +10,8 @@ const successFunc = () => {
   console.log(chalk.green(` Success publish to ${branch} branch! \n`));
 };
 
-if (!["release"].includes(branch)) {
-  console.log(`\n 分支名 ${branch} 不正确，应为 release \n`);
+if (!["gh-pages"].includes(branch)) {
+  console.log(`\n 分支名 ${branch} 不正确，应为 gh-pages \n`);
   return;
 }
 

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "deploy": "npm run build && node scripts/deploy.js release",
+    "deploy": "npm run build && node scripts/deploy.js gh-pages",
     "serve": "vite preview"
   },
   "dependencies": {
