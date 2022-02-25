@@ -8,7 +8,7 @@
         "dev-ts": "tsc -w",
         "dev-el": "nodemon -w dist -x cross-env NODE_ENV=dev electron .",
         "build-win": "tsc && cross-env NODE_ENV=prod electron-builder --win --x64",
-        "testdb": "ts-node testdb.ts"
+        "test-node": "ts-node test-node.ts"
     },
     "keywords": [],
     "author": "zhaoxuanzi",

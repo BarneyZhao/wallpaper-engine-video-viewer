@@ -1,7 +1,12 @@
-import { getDb, closeDb } from './src/db';
+import { execFile as ef } from 'child_process';
+import util from 'util';
+
+// import { getDb, closeDb } from './src/db';
+
+const execFile = util.promisify(ef);
 
 (async () => {
-    const db = await getDb();
+    // const db = await getDb();
     // db.serialize(() => {
     //     db.all(
     //         `SELECT json_path,create_time,${TABLE_SETS.join(
@@ -14,6 +19,7 @@ import { getDb, closeDb } from './src/db';
     //         }
     //     );
     // });
-
-    closeDb();
+    // closeDb();
+    const { stdout } = await execFile('./everything/es.exe', ['-h']);
+    console.log(stdout);
 })();
