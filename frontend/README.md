@@ -1,10 +1,17 @@
-# 介绍
+# 前端部分
 
-专门用于浏览`wallpaper-engine`视频文件，单击直接使用系统默认播放器打开。
+开发
 
-# 使用方法
+```shell
+pnpm i
+pnpm run dev
+```
 
-需要配合`Electron`基座使用，[下载地址](https://github.com/BarneyZhao/wallpaper-engine-video-viewer/releases)，基座中配置了此项目的[gh-pages](https://barneyzhao.github.io/wallpaper-engine-video-viewer/)地址。
+构建+发布 `gh-pages`
+
+```shell
+pnpm run deploy
+```
 
 # Vue 3 + Typescript + Vite
 
