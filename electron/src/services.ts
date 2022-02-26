@@ -23,7 +23,9 @@ const getPlatformPath = (path: string) => {
     return os.platform() === 'win32' ? path.replace(/\//g, '\\') : path;
 };
 
-const getProjectFolders = async (folderPath: string): Promise<string[]> => {
+const getProjectFolders = async (
+    folderPath: string
+): Promise<{ projectFolders: string[]; isEs: boolean }> => {
     const globPattern = `${folderPath}/**/${JSON_FILE}`;
 
     const { stderr, stdout } = await execFile(path.join(app.getAppPath(), 'everything/es.exe'), [
@@ -31,20 +33,23 @@ const getProjectFolders = async (folderPath: string): Promise<string[]> => {
     ]).catch((e) => ({ stderr: e, stdout: undefined }));
 
     let filesPath: string[];
+    let isEs = true;
     if (!stderr && stdout) {
         filesPath = stdout.split('\n');
         if (filesPath[filesPath.length - 1] === '') {
             filesPath.pop();
         }
     } else {
+        isEs = false;
         filesPath = await fg(globPattern);
     }
-    return (
-        filesPath
+    return {
+        projectFolders: filesPath
             // .filter((file) => !file.includes('@eaDir')) // 群晖nas的 Universal Search 生成
             // 最后得到文件夹名
-            .map((file) => file.replace(`${folderPath}/`, '').replace(`/${JSON_FILE}`, ''))
-    );
+            .map((file) => file.replace(`${folderPath}/`, '').replace(`/${JSON_FILE}`, '')),
+        isEs,
+    };
 };
 
 const getScanPathId = async (folderPath: string) => {
@@ -110,6 +115,7 @@ const exportApis = {
         const processInfo = {
             scanTime: 0,
             globTime: 0,
+            isEs: true,
             invalidCountTime: 0,
             deleteAndSelectTime: 0,
             needToCheckProjectsCount: 0,
@@ -123,8 +129,9 @@ const exportApis = {
         processInfo.scanTime = Date.now() - timestamp;
 
         timestamp = Date.now();
-        const projectFolders = await getProjectFolders(folderPath);
+        const { projectFolders, isEs } = await getProjectFolders(folderPath);
         processInfo.globTime = Date.now() - timestamp;
+        processInfo.isEs = isEs;
 
         timestamp = Date.now();
         const thisRoundFolders = '"' + projectFolders.join('","') + '"';

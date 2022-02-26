@@ -1,6 +1,6 @@
 {
     "name": "electron-base",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "productName": "wallpaper-engine-video-viewer",
     "description": "electron-base",
     "main": "dist/main.js",
