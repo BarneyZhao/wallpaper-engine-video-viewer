@@ -20,6 +20,12 @@ const execFile = util.promisify(ef);
     //     );
     // });
     // closeDb();
-    const { stdout } = await execFile('./everything/es.exe', ['-h']);
+    const { stdout, stderr } = await execFile('./everything/es.exe', [
+        'C:\\Users\\Barney\\dev-assets\\wallpaper-engine\\**\\project.json',
+    ]).catch((e) => ({ stderr: e, stdout: undefined }));
+    console.log('-----err-------');
+    console.log(stderr);
+    console.log('------------');
+
     console.log(stdout);
 })();

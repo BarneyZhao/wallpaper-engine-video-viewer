@@ -1,4 +1,7 @@
 import os from 'os';
+import util from 'util';
+import path from 'path';
+import { execFile as ef } from 'child_process';
 import { app, dialog, shell } from 'electron';
 import fg from 'fast-glob';
 import { chunk } from 'lodash';
@@ -12,6 +15,8 @@ import {
     // ProjectTableRow,
     getDb,
 } from './db';
+
+const execFile = util.promisify(ef);
 
 const getPlatformPath = (path: string) => {
     // windows 斜杠替换为反斜杠
@@ -74,6 +79,18 @@ const exportApis = {
     },
     openDbFileFolder: async () => {
         shell.showItemInFolder(getPlatformPath(DB_FILE));
+    },
+    checkEverything: async () => {
+        const { stdout, stderr } = await execFile(
+            path.join(app.getAppPath(), 'everything/es.exe'),
+            ['-h']
+        ).catch((e) => ({ stderr: e, stdout: undefined }));
+        console.log('-----err-------');
+        console.log(stderr);
+        console.log('------------');
+
+        console.log(stdout);
+        return stdout;
     },
     scanProjectsToDb: async (folderPath: string) => {
         const processInfo = {

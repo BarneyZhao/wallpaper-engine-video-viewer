@@ -11,6 +11,7 @@ const apis: ServiceNames[] = [
     'openDbFileFolder',
     'scanProjectsToDb',
     'getProjectsByPage',
+    'checkEverything',
 ];
 
 const exposeObj = {

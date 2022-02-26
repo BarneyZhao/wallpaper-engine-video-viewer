@@ -1,6 +1,6 @@
 // Modules to control application life and create native browser window
 import { app, BrowserWindow, Menu, MenuItem, ipcMain } from 'electron';
-import Url from 'url';
+import { pathToFileURL } from 'url';
 import Path from 'path';
 import { existsSync } from 'fs';
 import { debounce } from 'lodash';
@@ -26,12 +26,8 @@ const store = new Store();
 
 const getLocalDocsFile = () => {
     if (existsSync(DOCS_URL)) {
-        return Url.format({
-            protocol: 'file',
-            slashes: true,
-            // pathname: Path.join(__dirname, DOCS_URL), // 构建包内的路径
-            pathname: DOCS_URL, // 项目根路径
-        });
+        //  开发时为项目根路径；构建后为程序根路径（exe文件同级）
+        return pathToFileURL(DOCS_URL).href;
     }
     console.log('\n No local docs file.');
     return '';
