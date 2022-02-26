@@ -24,10 +24,24 @@ const getPlatformPath = (path: string) => {
 };
 
 const getProjectFolders = async (folderPath: string): Promise<string[]> => {
-    const filesPath = await fg(`${folderPath}/**/${JSON_FILE}`);
+    const globPattern = `${folderPath}/**/${JSON_FILE}`;
+
+    const { stderr, stdout } = await execFile(path.join(app.getAppPath(), 'everything/es.exe'), [
+        getPlatformPath(globPattern),
+    ]).catch((e) => ({ stderr: e, stdout: undefined }));
+
+    let filesPath: string[];
+    if (!stderr && stdout) {
+        filesPath = stdout.split('\n');
+        if (filesPath[filesPath.length - 1] === '') {
+            filesPath.pop();
+        }
+    } else {
+        filesPath = await fg(globPattern);
+    }
     return (
         filesPath
-            .filter((file) => !file.includes('@eaDir'))
+            // .filter((file) => !file.includes('@eaDir')) // 群晖nas的 Universal Search 生成
             // 最后得到文件夹名
             .map((file) => file.replace(`${folderPath}/`, '').replace(`/${JSON_FILE}`, ''))
     );
@@ -80,10 +94,10 @@ const exportApis = {
     openDbFileFolder: async () => {
         shell.showItemInFolder(getPlatformPath(DB_FILE));
     },
-    checkEverything: async () => {
+    checkEverything: async (param: string[]) => {
         const { stdout, stderr } = await execFile(
             path.join(app.getAppPath(), 'everything/es.exe'),
-            ['-h']
+            param
         ).catch((e) => ({ stderr: e, stdout: undefined }));
         console.log('-----err-------');
         console.log(stderr);
