@@ -60,3 +60,5 @@ export const POOL_SIZE = 4;
 export const JSON_FILE = 'project.json';
 
 export const DB_FILE = IS_DEV ? './app.db' : Path.join(app.getPath('userData'), 'app.db');
+
+export const EVERYTHING_PATH = 'everything/es.exe';

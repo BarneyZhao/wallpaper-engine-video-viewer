@@ -7,7 +7,7 @@ import fg from 'fast-glob';
 import { chunk } from 'lodash';
 
 import workerPool from './worker';
-import { POOL_SIZE, JSON_FILE, DB_FILE } from './config';
+import { POOL_SIZE, JSON_FILE, DB_FILE, EVERYTHING_PATH } from './config';
 import {
     SCAN_PATH_TABLE_NAME,
     PROJECT_TABLE_NAME,
@@ -18,9 +18,12 @@ import {
 
 const execFile = util.promisify(ef);
 
-const getPlatformPath = (path: string) => {
-    // windows 斜杠替换为反斜杠
-    return os.platform() === 'win32' ? path.replace(/\//g, '\\') : path;
+const getPlatformPath = (path: string, back2Forward?: boolean) => {
+    // windows 斜杠<-->反斜杠
+    if (os.platform() === 'win32') {
+        return back2Forward ? path.replace(/\\/g, '/') : path.replace(/\//g, '\\');
+    }
+    return path;
 };
 
 const getProjectFolders = async (
@@ -28,21 +31,24 @@ const getProjectFolders = async (
 ): Promise<{ projectFolders: string[]; isEs: boolean }> => {
     const globPattern = `${folderPath}/**/${JSON_FILE}`;
 
-    const { stderr, stdout } = await execFile(path.join(app.getAppPath(), 'everything/es.exe'), [
+    // everything 接收反斜杠，输出反斜杠
+    const { stderr, stdout } = await execFile(path.join(app.getAppPath(), EVERYTHING_PATH), [
         getPlatformPath(globPattern),
     ]).catch((e) => ({ stderr: e, stdout: undefined }));
 
     let filesPath: string[];
     let isEs = true;
     if (!stderr && stdout) {
-        filesPath = stdout.split('\n');
+        filesPath = stdout.split('\r\n').map((p) => getPlatformPath(p, true));
         if (filesPath[filesPath.length - 1] === '') {
             filesPath.pop();
         }
     } else {
         isEs = false;
+        // fg 接收正斜杠，输出正斜杠
         filesPath = await fg(globPattern);
     }
+
     return {
         projectFolders: filesPath
             // .filter((file) => !file.includes('@eaDir')) // 群晖nas的 Universal Search 生成
@@ -85,9 +91,11 @@ const exportApis = {
             properties: ['openDirectory'],
         });
         if (!pathRes || pathRes.length === 0) return;
-        return pathRes[0].replace(/\\/g, '/'); // 反斜杠替换为斜杠
+        // win平台会输出反斜杠
+        return getPlatformPath(pathRes[0], true);
     },
     openFileOrFolder: async (file: string, folder?: boolean) => {
+        // win平台只接收反斜杠
         const filePath = getPlatformPath(file);
         console.log(`Open file${folder ? ' folder' : ''}:[${filePath}].`);
         if (folder) {
@@ -97,19 +105,15 @@ const exportApis = {
         }
     },
     openDbFileFolder: async () => {
+        // win平台只接收反斜杠
         shell.showItemInFolder(getPlatformPath(DB_FILE));
     },
     checkEverything: async (param: string[]) => {
-        const { stdout, stderr } = await execFile(
-            path.join(app.getAppPath(), 'everything/es.exe'),
+        const { stderr, stdout } = await execFile(
+            path.join(app.getAppPath(), EVERYTHING_PATH),
             param
         ).catch((e) => ({ stderr: e, stdout: undefined }));
-        console.log('-----err-------');
-        console.log(stderr);
-        console.log('------------');
-
-        console.log(stdout);
-        return stdout;
+        return { stderr, stdout };
     },
     scanProjectsToDb: async (folderPath: string) => {
         const processInfo = {
