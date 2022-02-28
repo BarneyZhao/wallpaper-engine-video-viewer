@@ -6,13 +6,16 @@ import { app, dialog, shell } from 'electron';
 import fg from 'fast-glob';
 import { chunk } from 'lodash';
 
+// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+import { apiConfigLink } from '../../api-config';
+
 import workerPool from './worker';
 import { POOL_SIZE, JSON_FILE, DB_FILE, EVERYTHING_PATH } from './config';
 import {
     SCAN_PATH_TABLE_NAME,
     PROJECT_TABLE_NAME,
     ScanPathTableRow,
-    // ProjectTableRow,
+    ProjectTableRow,
     getDb,
 } from './db';
 
@@ -84,6 +87,9 @@ const getScanPathId = async (folderPath: string) => {
     });
 };
 
+/**
+ * 增加接口以后要在{@link apiConfigLink})添加注册，然后才能在前端项目中暴露对应调用函数
+ */
 const exportApis = {
     getAppVersion: async () => app.getVersion(),
     selectFolder: async () => {
@@ -115,7 +121,14 @@ const exportApis = {
         ).catch((e) => ({ stderr: e, stdout: undefined }));
         return { stderr, stdout };
     },
-    scanProjectsToDb: async (folderPath: string) => {
+    scanProjectsToDb: async (
+        folderPath: string
+    ): Promise<{
+        length: number;
+        invalidCount: number;
+        newCount: number;
+        processInfo: any;
+    }> => {
         const processInfo = {
             scanTime: 0,
             globTime: 0,
@@ -293,7 +306,7 @@ const exportApis = {
             );
         });
 
-        return new Promise<{ total: number; list: unknown[] }>((resolve) => {
+        return new Promise<{ total: number; list: ProjectTableRow[] }>((resolve) => {
             db.all(
                 `SELECT ${querySets} FROM ${PROJECT_TABLE_NAME}
                     ${conditionStr}
@@ -301,7 +314,7 @@ const exportApis = {
                     LIMIT ${(pageNo - 1) * pageSize}, ${pageSize}
                 `,
                 sqlParams,
-                function (err, data: unknown[]) {
+                function (err, data: ProjectTableRow[]) {
                     if (!err) {
                         resolve({ total, list: data });
                     } else {
@@ -315,3 +328,5 @@ const exportApis = {
 };
 
 export default exportApis;
+
+export type Services = typeof exportApis;

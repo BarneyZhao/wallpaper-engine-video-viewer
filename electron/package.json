@@ -3,7 +3,7 @@
     "version": "1.2.0",
     "productName": "wallpaper-engine-video-viewer",
     "description": "electron-base",
-    "main": "dist/main.js",
+    "main": "dist/electron/src/main.js",
     "scripts": {
         "dev-ts": "tsc -w",
         "dev-el": "npx nodemon -w dist -x cross-env NODE_ENV=dev electron .",

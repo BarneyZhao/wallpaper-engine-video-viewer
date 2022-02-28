@@ -7,16 +7,11 @@ declare module "*.vue" {
   export default component;
 }
 
-interface ApiResponse {
-  success: boolean;
-  message?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: any;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PromiseFunc = (...arg: any[]) => Promise<any>;
 interface Window {
   electron: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    apis: Record<string, (...arg: any[]) => Promise<ApiResponse>>;
+    apis: Record<string, PromiseFunc>;
     getImg: (path: string) => Promise<string>;
   };
 }

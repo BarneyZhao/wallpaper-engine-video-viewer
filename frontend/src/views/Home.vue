@@ -12,23 +12,9 @@ import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal, getSizeDesc } from "../utils";
-import {
-  openFileOrFolder,
-  getProjectsByPage,
-  scanProjectsToDb,
-  selectFolder,
-  getImg,
-} from "../services";
+import { apis, getImg, Project } from "../services";
 
 // defineProps<{ msg?: string }>();
-
-interface Project {
-  project_folder: string;
-  file: string;
-  file_size: number;
-  preview: string;
-  title: string;
-}
 
 const isLoading = ref(false);
 const selectedPath = ref(getLocal<string>("SELECTED_PATH") || "");
@@ -58,7 +44,7 @@ const syncLoadImg = async (_projects: Project[]) => {
 const getProjects = async (_page: number) => {
   if (!selectedPath.value) return;
   window.scrollTo(0, 0);
-  const res = await getProjectsByPage(
+  const res = await apis.getProjectsByPage(
     selectedPath.value,
     orderBy.value,
     orderType.value,
@@ -79,7 +65,7 @@ const getProjects = async (_page: number) => {
 const scanProjects = async (_path: string) => {
   isLoading.value = true;
   const timePromise = new Promise((resolve) => setTimeout(resolve, 500));
-  const scanRes = await scanProjectsToDb(_path);
+  const scanRes = await apis.scanProjectsToDb(_path);
 
   timePromise.then(() => {
     isLoading.value = false;
@@ -103,7 +89,7 @@ const scanProjects = async (_path: string) => {
 
 const selectFolderPath = async () => {
   isLoading.value = true;
-  const res = await selectFolder();
+  const res = await apis.selectFolder();
   if (res.success && res.data) {
     selectedPath.value = res.data;
     setLocal("SELECTED_PATH", res.data);
@@ -118,7 +104,7 @@ const orderTypeChange = () => {
 };
 
 const picItemClick = ({ project_folder, file }: Project, folder?: boolean) => {
-  openFileOrFolder(getFilePath(project_folder, file), folder);
+  apis.openFileOrFolder(getFilePath(project_folder, file), folder);
 };
 
 document.addEventListener("keydown", (e) => {

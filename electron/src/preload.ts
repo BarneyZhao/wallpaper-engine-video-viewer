@@ -1,20 +1,11 @@
 import { readFile } from 'fs/promises';
 import { contextBridge, ipcRenderer } from 'electron';
 
-import { ServiceNames } from 'types';
-
-// services.ts 中增加接口以后，要在这里添加注册，然后才能在前端项目中暴露对应调用函数
-const apis: ServiceNames[] = [
-    'getAppVersion',
-    'selectFolder',
-    'openFileOrFolder',
-    'openDbFileFolder',
-    'scanProjectsToDb',
-    'getProjectsByPage',
-    'checkEverything',
-];
+// services.ts 中 增加接口以后要在这里添加注册，然后才能在前端项目中暴露对应调用函数
+import apis from '../../api-config';
 
 const exposeObj = {
+    // preload 和 services 需要通过 ipcRenderer 沟通
     apis: apis.reduce((obj, api) => {
         return { ...obj, [api]: (...arg: unknown[]) => ipcRenderer.invoke(`api:${api}`, ...arg) };
     }, {}),
