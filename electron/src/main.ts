@@ -6,8 +6,6 @@ import { existsSync } from 'fs';
 import { debounce } from 'lodash';
 import Store from 'electron-store';
 
-import { Service } from 'types';
-
 import {
     DevTypeEnum,
     APP_MENUS,
@@ -130,7 +128,8 @@ app.on('activate', function () {
 // code. You can also put them in separate files and require them here.
 // require(`${app.getAppPath()}/src/controllers/baseController.js`);
 
-const registerServices = (services: Record<string, Service>) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const registerServices = (services: Record<string, (...arg: any[]) => Promise<any>>) => {
     Object.entries(services).forEach(([key, service]) => {
         ipcMain.handle(`api:${key}`, async (event, ...arg) => {
             return await service(...arg)

@@ -1,8 +1,14 @@
 import FS, { Stats } from 'fs';
 import { StaticPool } from 'node-worker-threads-pool';
 
-import { Project } from 'types';
 import { POOL_SIZE } from './config';
+
+interface Project {
+    type: string;
+    file: string;
+    preview: string;
+    title: string;
+}
 
 const staticPool = new StaticPool({
     size: POOL_SIZE,
