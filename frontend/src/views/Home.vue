@@ -27,6 +27,7 @@ const orderBy = ref(getLocal<string>("ORDER_BY") || "create_time"); // file_size
 const orderType = ref(getLocal<string>("ORDER_TYPE") || "DESC"); // ASC
 const inputTitle = ref("");
 const queryTitle = ref("");
+const checkRepeat = ref(getLocal<boolean>("CHECK_REPEAT") || false);
 // const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
 const getFilePath = (projectFolder: string, file: string) => {
@@ -44,14 +45,15 @@ const syncLoadImg = async (_projects: Project[]) => {
 const getProjects = async (_page: number) => {
   if (!selectedPath.value) return;
   window.scrollTo(0, 0);
-  const res = await apis.getProjectsByPage(
-    selectedPath.value,
-    orderBy.value,
-    orderType.value,
-    _page,
-    pageSize.value,
-    queryTitle.value
-  );
+  const res = await apis.getProjectsByPage({
+    folderPath: selectedPath.value,
+    orderBy: orderBy.value,
+    orderType: orderType.value,
+    pageNo: _page,
+    pageSize: pageSize.value,
+    title: queryTitle.value,
+    checkRepeat: checkRepeat.value,
+  });
   if (res.success && res.data) {
     const list = res.data.list;
 
@@ -120,10 +122,10 @@ document.addEventListener("keydown", (e) => {
 });
 
 watch(
-  [pageSize, orderBy, orderType, queryTitle],
+  [pageSize, orderBy, orderType, checkRepeat, queryTitle],
   (
-    [_pageSize, _orderBy, _orderType /**, _queryTitle */],
-    [prePageSize, preOrderBy, preOrderType /**, preQueryTitle */]
+    [_pageSize, _orderBy, _orderType, _checkRepeat],
+    [prePageSize, preOrderBy, preOrderType, preCheckRepeat]
   ) => {
     if (_pageSize !== prePageSize) {
       setLocal("PAGE_SIZE", _pageSize);
@@ -134,8 +136,9 @@ watch(
     if (_orderType !== preOrderType) {
       setLocal("ORDER_TYPE", _orderType);
     }
-    // if (_queryTitle !== preQueryTitle) {
-    // }
+    if (_checkRepeat !== preCheckRepeat) {
+      setLocal("CHECK_REPEAT", _checkRepeat);
+    }
     if (currentPage.value !== 1) {
       // 监听字段发生变化时需要重置 currentPage，重置后会触发 currentPage watch
       currentPage.value = 1;
@@ -195,13 +198,19 @@ getProjects(currentPage.value);
       </ElButton>
       <ElInput
         v-model="inputTitle"
-        placeholder="输入名称"
+        placeholder="输入名称搜索"
         style="margin-left: 12px; width: 200px"
       >
         <template #append>
           <ElButton :icon="Search" @click="queryTitle = inputTitle" />
         </template>
       </ElInput>
+      <ElCheckbox
+        v-model="checkRepeat"
+        label="查重模式"
+        border
+        style="margin-left: 12px"
+      />
       <!-- <ElCheckbox v-model="dynamicPageSize" label="动态条数" border /> -->
     </template>
   </div>
@@ -215,7 +224,7 @@ getProjects(currentPage.value);
       layout="total, sizes, prev, pager, next"
     />
   </div>
-  <ElEmpty v-if="projects.length === 0" description="什么都没有~"></ElEmpty>
+  <ElEmpty v-if="projects.length === 0" description="什么都没有~" />
   <div class="pic-box">
     <div v-for="(project, index) in projects" :key="index" class="pic-item">
       <img

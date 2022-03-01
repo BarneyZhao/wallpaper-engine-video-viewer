@@ -19,6 +19,16 @@ import {
     getDb,
 } from './db';
 
+interface QueryObj {
+    folderPath: string;
+    orderBy?: string;
+    orderType?: string;
+    pageNo?: number;
+    pageSize?: number;
+    title?: string;
+    checkRepeat?: boolean;
+}
+
 const execFile = util.promisify(ef);
 
 const getPlatformPath = (path: string, back2Forward?: boolean) => {
@@ -127,6 +137,7 @@ const exportApis = {
         length: number;
         invalidCount: number;
         newCount: number;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         processInfo: any;
     }> => {
         const processInfo = {
@@ -268,16 +279,16 @@ const exportApis = {
             });
         });
     },
-    getProjectsByPage: async (
-        folderPath: string,
+    getProjectsByPage: async ({
+        folderPath,
         orderBy = 'create_time',
         orderType = 'DESC',
         pageNo = 1,
         pageSize = 20,
-        title = ''
-    ) => {
+        title = '',
+        checkRepeat,
+    }: QueryObj) => {
         const scanPathId = await getScanPathId(folderPath);
-        const querySets = 'project_folder, file, file_size, preview, title';
         let conditionStr = `WHERE scan_path_id=? AND file NOT NULL`;
         const sqlParams: unknown[] = [scanPathId];
 
@@ -285,6 +296,16 @@ const exportApis = {
         if (queryTitle) {
             conditionStr += ` AND title LIKE ? `;
             sqlParams.push(`%${queryTitle}%`);
+        }
+
+        if (checkRepeat) {
+            conditionStr = `
+                WHERE file_size IN (
+                    SELECT file_size FROM ${PROJECT_TABLE_NAME}
+                    ${conditionStr}
+                    GROUP BY file_size HAVING count(*) > 1
+                )
+            `;
         }
 
         const db = await getDb();
@@ -306,6 +327,7 @@ const exportApis = {
             );
         });
 
+        const querySets = 'project_folder, file, file_size, preview, title';
         return new Promise<{ total: number; list: ProjectTableRow[] }>((resolve) => {
             db.all(
                 `SELECT ${querySets} FROM ${PROJECT_TABLE_NAME}

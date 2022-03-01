@@ -1,6 +1,6 @@
 {
   "name": "wallpaper-engine-video-viewer",
-  "version": "20220226a",
+  "version": "20220301a",
   "repository": {
     "url": "https://github.com/BarneyZhao/wallpaper-engine-video-viewer.git"
   },
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^0.2.7",
-    "element-plus": "^2.0.2",
+    "element-plus": "^2.0.4",
     "semver": "^7.3.5",
     "vue": "^3.2.16"
   },
