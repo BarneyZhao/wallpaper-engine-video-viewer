@@ -12,22 +12,38 @@ import "element-plus/es/components/message/style/css";
 
 import { DEFAULT_PAGE_SIZE, SIZES } from "../const";
 import { getLocal, setLocal, getSizeDesc } from "../utils";
+import {
+  SELECTED_PATH,
+  SELECTED_COPY_PATH,
+  SYNC_INFO,
+  PAGE_SIZE,
+  ORDER_BY,
+  ORDER_TYPE,
+  CHECK_REPEAT,
+} from "../storageKey";
 import { apis, getImg, Project } from "../services";
 
 // defineProps<{ msg?: string }>();
 
 const isLoading = ref(false);
-const selectedPath = ref(getLocal<string>("SELECTED_PATH") || "");
+const selectedPath = ref(getLocal<string>(SELECTED_PATH) || "");
+const selectedCopyPath = ref(getLocal<string>(SELECTED_COPY_PATH) || "");
+const syncInfo = ref(
+  getLocal<{ syncWhenInit: boolean; timestamp: string }>(SYNC_INFO) || {
+    syncWhenInit: false,
+    timestamp: "",
+  }
+);
 const projects = ref<Project[]>([]);
 const projectTotal = ref(0);
 const currentPage = ref(1);
-const pageSize = ref(getLocal<number>("PAGE_SIZE") || DEFAULT_PAGE_SIZE);
+const pageSize = ref(getLocal<number>(PAGE_SIZE) || DEFAULT_PAGE_SIZE);
 const projectImgs = ref<string[]>([]);
-const orderBy = ref(getLocal<string>("ORDER_BY") || "create_time"); // file_size
-const orderType = ref(getLocal<string>("ORDER_TYPE") || "DESC"); // ASC
+const orderBy = ref(getLocal<string>(ORDER_BY) || "create_time"); // file_size
+const orderType = ref(getLocal<string>(ORDER_TYPE) || "DESC"); // ASC
 const inputTitle = ref("");
 const queryTitle = ref("");
-const checkRepeat = ref(getLocal<boolean>("CHECK_REPEAT") || false);
+const checkRepeat = ref(getLocal<boolean>(CHECK_REPEAT) || false);
 // const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
 const getFilePath = (projectFolder: string, file: string) => {
@@ -72,6 +88,7 @@ const scanProjects = async (_path: string) => {
   timePromise.then(() => {
     isLoading.value = false;
     if (scanRes.success && scanRes.data) {
+      syncInfo.value.timestamp = scanRes.data.timestamp;
       const message = `成功同步 ${scanRes.data.length} ，新增 ${scanRes.data.newCount} ，清除 ${scanRes.data.invalidCount} 。`;
       ElMessage({
         showClose: true,
@@ -94,7 +111,7 @@ const selectFolderPath = async () => {
   const res = await apis.selectFolder();
   if (res.success && res.data) {
     selectedPath.value = res.data;
-    setLocal("SELECTED_PATH", res.data);
+    setLocal(SELECTED_PATH, res.data);
     scanProjects(res.data);
   } else {
     isLoading.value = false;
@@ -105,8 +122,18 @@ const orderTypeChange = () => {
   orderType.value = orderType.value === "ASC" ? "DESC" : "ASC";
 };
 
-const picItemClick = ({ project_folder, file }: Project, folder?: boolean) => {
-  apis.openFileOrFolder(getFilePath(project_folder, file), folder);
+const picItemClick = ({ project_folder, file }: Project) => {
+  apis.openFile(getFilePath(project_folder, file));
+};
+
+const contextmenuClick = async ({ project_folder, file }: Project) => {
+  const res = await apis
+    .showContextmenus(getFilePath(project_folder, file), selectedCopyPath.value)
+    .catch(console.error);
+  if (res?.success && res.data?.act === "copied") {
+    selectedCopyPath.value = res.data.path || "";
+    setLocal("SELECTED_COPY_PATH", res.data.path);
+  }
 };
 
 document.addEventListener("keydown", (e) => {
@@ -128,16 +155,16 @@ watch(
     [prePageSize, preOrderBy, preOrderType, preCheckRepeat]
   ) => {
     if (_pageSize !== prePageSize) {
-      setLocal("PAGE_SIZE", _pageSize);
+      setLocal(PAGE_SIZE, _pageSize);
     }
     if (_orderBy !== preOrderBy) {
-      setLocal("ORDER_BY", _orderBy);
+      setLocal(ORDER_BY, _orderBy);
     }
     if (_orderType !== preOrderType) {
-      setLocal("ORDER_TYPE", _orderType);
+      setLocal(ORDER_TYPE, _orderType);
     }
     if (_checkRepeat !== preCheckRepeat) {
-      setLocal("CHECK_REPEAT", _checkRepeat);
+      setLocal(CHECK_REPEAT, _checkRepeat);
     }
     if (currentPage.value !== 1) {
       // 监听字段发生变化时需要重置 currentPage，重置后会触发 currentPage watch
@@ -151,9 +178,16 @@ watch(
 watch([currentPage], ([_currentPage]) => {
   getProjects(_currentPage);
 });
+watch([syncInfo], ([_syncInfo]) => {
+  setLocal(SYNC_INFO, _syncInfo);
+});
 
 // 初始化查询
-getProjects(currentPage.value);
+if (selectedPath.value && syncInfo.value.syncWhenInit) {
+  scanProjects(selectedPath.value);
+} else {
+  getProjects(currentPage.value);
+}
 </script>
 
 <template>
@@ -172,13 +206,24 @@ getProjects(currentPage.value);
       </ElButton>
     </ElTooltip>
     <template v-if="selectedPath">
-      <ElButton
-        @click="() => scanProjects(selectedPath)"
-        :icon="Refresh"
-        :loading="isLoading"
+      <ElTooltip
+        placement="bottom"
+        :content="`上次同步: ${syncInfo.timestamp}`"
+        :disabled="!syncInfo.timestamp"
       >
-        重新同步
-      </ElButton>
+        <ElButton
+          @click="() => scanProjects(selectedPath)"
+          :icon="Refresh"
+          :loading="isLoading"
+        >
+          重新同步
+        </ElButton></ElTooltip
+      >
+      <ElCheckbox
+        v-model="syncInfo.syncWhenInit"
+        label="启动时自动同步"
+        style="margin: 0 0 0 12px"
+      ></ElCheckbox>
       <span class="order-explain">根据</span>
       <ElSelect
         v-model="orderBy"
@@ -232,7 +277,7 @@ getProjects(currentPage.value);
         alt=""
         :src="projectImgs[index]"
         @click="picItemClick(project)"
-        @contextmenu="picItemClick(project, true)"
+        @contextmenu="contextmenuClick(project)"
       />
       <p :title="project.title">
         [{{ getSizeDesc(project.file_size) }}]&nbsp;{{ project.title }}

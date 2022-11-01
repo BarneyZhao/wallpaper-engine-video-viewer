@@ -15,5 +15,6 @@ import Home from "./views/Home.vue";
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
   padding-bottom: 20px;
+  min-width: 1080px;
 }
 </style>
