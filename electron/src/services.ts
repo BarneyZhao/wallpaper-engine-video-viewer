@@ -2,9 +2,11 @@ import os from 'os';
 import util from 'util';
 import path from 'path';
 import { execFile as ef } from 'child_process';
-import { app, dialog, shell } from 'electron';
+import { app, dialog, shell, Menu, MenuItem } from 'electron';
+import fs from 'fs-extra';
 import fg from 'fast-glob';
 import { chunk } from 'lodash';
+import dayjs from 'dayjs';
 
 // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 import { apiConfigLink } from '../../api-config';
@@ -97,11 +99,96 @@ const getScanPathId = async (folderPath: string) => {
     });
 };
 
+const copyFolderToSeletedPath = (folderPath: string, folderName: string, selectedPath: string) => {
+    return fs.copy(
+        folderPath,
+        // 选择路径 + 文件夹名
+        `${selectedPath}/${folderName}`,
+        { overwrite: false }
+    );
+};
+
 /**
  * 增加接口以后要在{@link apiConfigLink})添加注册，然后才能在前端项目中暴露对应调用函数
  */
 const exportApis = {
     getAppVersion: async () => app.getVersion(),
+    showContextmenus: async (filePath: string, prevSeletedPath?: string) => {
+        let isClickItem = false;
+        const folderPathArr = filePath.split('/');
+        folderPathArr.pop(); // 移除文件名，剩下为文件夹路径数组
+        const folderPath = folderPathArr.join('/');
+        const folderName = folderPathArr.pop() as string;
+
+        return new Promise<{ act: string; path?: string }>((resolve) => {
+            const template = [
+                {
+                    label: '打开文件所在位置',
+                    click: () => {
+                        isClickItem = true;
+                        // win平台只接收反斜杠
+                        const _filePath = getPlatformPath(filePath);
+                        console.log(`Open file folder: [${_filePath}].\n`);
+                        shell.showItemInFolder(_filePath);
+                        resolve({ act: 'open' });
+                    },
+                },
+                { type: 'separator' },
+                {
+                    label: '复制项目至...',
+                    click: async () => {
+                        isClickItem = true;
+                        const selectedPath = await exportApis.selectFolder();
+                        if (selectedPath) {
+                            console.log(`copy folder [${folderPath}] to [${selectedPath}]...`);
+
+                            await copyFolderToSeletedPath(
+                                folderPath,
+                                folderName,
+                                selectedPath
+                            ).catch((e) => {
+                                throw e;
+                            });
+
+                            console.log('folder copied.\n');
+                            resolve({ act: 'copied', path: selectedPath });
+                        } else {
+                            resolve({ act: 'hide' });
+                        }
+                    },
+                },
+            ] as unknown as MenuItem[];
+            if (prevSeletedPath) {
+                template.push({
+                    label: `复制项目至 ${prevSeletedPath}`,
+                    click: async () => {
+                        isClickItem = true;
+                        console.log(`copy folder [${folderPath}] to [${prevSeletedPath}]...`);
+
+                        await copyFolderToSeletedPath(
+                            folderPath,
+                            folderName,
+                            prevSeletedPath
+                        ).catch((e) => {
+                            throw e;
+                        });
+
+                        console.log('folder copied.\n');
+                        resolve({ act: 'copied', path: prevSeletedPath });
+                    },
+                } as unknown as MenuItem);
+            }
+            const menu = Menu.buildFromTemplate(template);
+            menu.once('menu-will-close', () => {
+                setTimeout(() => {
+                    if (!isClickItem) {
+                        resolve({ act: 'hide' });
+                    }
+                }, 1000);
+            });
+            menu.popup();
+        });
+    },
     selectFolder: async () => {
         const pathRes = dialog.showOpenDialogSync({
             properties: ['openDirectory'],
@@ -110,15 +197,11 @@ const exportApis = {
         // win平台会输出反斜杠
         return getPlatformPath(pathRes[0], true);
     },
-    openFileOrFolder: async (file: string, folder?: boolean) => {
+    openFile: async (file: string) => {
         // win平台只接收反斜杠
         const filePath = getPlatformPath(file);
-        console.log(`Open file${folder ? ' folder' : ''}:[${filePath}].`);
-        if (folder) {
-            shell.showItemInFolder(filePath);
-        } else {
-            shell.openPath(filePath);
-        }
+        console.log(`Open file:[${filePath}].`);
+        shell.openPath(filePath);
     },
     openDbFileFolder: async () => {
         // win平台只接收反斜杠
@@ -139,6 +222,7 @@ const exportApis = {
         newCount: number;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         processInfo: any;
+        timestamp: string;
     }> => {
         const processInfo = {
             scanTime: 0,
@@ -275,6 +359,7 @@ const exportApis = {
                     invalidCount,
                     newCount: needToCheckProjects.length,
                     processInfo,
+                    timestamp: dayjs(timestamp).format('YYYY-MM-DD HH:mm'),
                 });
             });
         });

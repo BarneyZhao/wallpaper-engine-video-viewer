@@ -15,8 +15,9 @@ export type Services = S;
  */
 export const apis: Array<keyof S> = [
   "getAppVersion",
+  "showContextmenus",
   "selectFolder",
-  "openFileOrFolder",
+  "openFile",
   "openDbFileFolder",
   "scanProjectsToDb",
   "getProjectsByPage",

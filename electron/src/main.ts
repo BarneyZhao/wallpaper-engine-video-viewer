@@ -88,7 +88,7 @@ const createWindow = () => {
 };
 
 const setAppMenus = () => {
-    const template: MenuItem[] = APP_MENUS as unknown as MenuItem[];
+    const template = APP_MENUS as unknown as MenuItem[];
     if (process.platform === 'darwin') {
         template.unshift(MAC_MENUS as unknown as MenuItem);
     }

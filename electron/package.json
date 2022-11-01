@@ -1,6 +1,6 @@
 {
     "name": "electron-base",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "productName": "wallpaper-engine-video-viewer",
     "description": "electron-base",
     "main": "dist/electron/src/main.js",
@@ -14,8 +14,10 @@
     "author": "zhaoxuanzi",
     "license": "MIT",
     "dependencies": {
+        "dayjs": "^1.11.6",
         "electron-store": "^8.0.1",
         "fast-glob": "^3.2.9",
+        "fs-extra": "^10.1.0",
         "lodash": "^4.17.21",
         "node-worker-threads-pool": "^1.5.1",
         "sqlite3": "^5.0.2",
