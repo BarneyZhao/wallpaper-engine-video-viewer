@@ -133,6 +133,12 @@ const contextmenuClick = async ({ project_folder, file }: Project) => {
   if (res?.success && res.data?.act === "copied") {
     selectedCopyPath.value = res.data.path || "";
     setLocal("SELECTED_COPY_PATH", res.data.path);
+    ElMessage({
+      showClose: true,
+      message: "复制完成",
+      type: "success",
+      duration: 10000,
+    });
   }
 };
 
