@@ -7,7 +7,13 @@ import APIS, { Services, ProjectTableRow } from "../../api-config";
 
 import { specifyElectronVersion } from "./const";
 
-export type Project = ProjectTableRow;
+export enum CopyStuts {
+  NORMAL,
+  RUNING,
+  COPIED,
+}
+
+export type Project = ProjectTableRow & { copyStuts?: CopyStuts };
 
 // 提取 promise 中的类型
 type Unpromise<T> = T extends Promise<infer U> ? U : T;

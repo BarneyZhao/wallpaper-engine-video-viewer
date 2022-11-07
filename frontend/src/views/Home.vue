@@ -21,7 +21,7 @@ import {
   ORDER_TYPE,
   CHECK_REPEAT,
 } from "../storageKey";
-import { apis, getImg, Project } from "../services";
+import { apis, getImg, CopyStuts, Project } from "../services";
 
 // defineProps<{ msg?: string }>();
 
@@ -126,19 +126,18 @@ const picItemClick = ({ project_folder, file }: Project) => {
   apis.openFile(getFilePath(project_folder, file));
 };
 
-const contextmenuClick = async ({ project_folder, file }: Project) => {
+const contextmenuClick = async (
+  { project_folder, file }: Project,
+  index: number
+) => {
+  projects.value[index].copyStuts = CopyStuts.RUNING;
   const res = await apis
     .showContextmenus(getFilePath(project_folder, file), selectedCopyPath.value)
     .catch(console.error);
   if (res?.success && res.data?.act === "copied") {
     selectedCopyPath.value = res.data.path || "";
     setLocal("SELECTED_COPY_PATH", res.data.path);
-    ElMessage({
-      showClose: true,
-      message: "复制完成",
-      type: "success",
-      duration: 10000,
-    });
+    projects.value[index].copyStuts = CopyStuts.COPIED;
   }
 };
 
@@ -278,13 +277,17 @@ if (selectedPath.value && syncInfo.value.syncWhenInit) {
   <ElEmpty v-if="projects.length === 0" description="什么都没有~" />
   <div class="pic-box">
     <div v-for="(project, index) in projects" :key="index" class="pic-item">
-      <img
-        class="img"
-        alt=""
-        :src="projectImgs[index]"
-        @click="picItemClick(project)"
-        @contextmenu="contextmenuClick(project)"
-      />
+      <ElBadge
+        :hidden="!project.copyStuts"
+        :value="project.copyStuts === CopyStuts.RUNING ? '复制中' : '已复制'"
+      >
+        <img
+          class="img"
+          alt=""
+          :src="projectImgs[index]"
+          @click="picItemClick(project)"
+          @contextmenu="contextmenuClick(project, index)"
+      /></ElBadge>
       <p :title="project.title">
         [{{ getSizeDesc(project.file_size) }}]&nbsp;{{ project.title }}
       </p>
