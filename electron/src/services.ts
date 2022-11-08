@@ -30,6 +30,7 @@ interface QueryObj {
     title?: string;
     checkRepeat?: boolean;
 }
+type ContextmenuAct = 'open' | 'copySelect' | 'copyToPrev' | 'hide';
 
 const execFile = util.promisify(ef);
 
@@ -99,15 +100,6 @@ const getScanPathId = async (folderPath: string) => {
     });
 };
 
-const copyFolderToSeletedPath = (folderPath: string, folderName: string, selectedPath: string) => {
-    return fs.copy(
-        folderPath,
-        // 选择路径 + 文件夹名
-        `${selectedPath}/${folderName}`,
-        { overwrite: false }
-    );
-};
-
 /**
  * 增加接口以后要在{@link apiConfigLink})添加注册，然后才能在前端项目中暴露对应调用函数
  */
@@ -115,12 +107,7 @@ const exportApis = {
     getAppVersion: async () => app.getVersion(),
     showContextmenus: async (filePath: string, prevSeletedPath?: string) => {
         let isClickItem = false;
-        const folderPathArr = filePath.split('/');
-        folderPathArr.pop(); // 移除文件名，剩下为文件夹路径数组
-        const folderPath = folderPathArr.join('/');
-        const folderName = folderPathArr.pop() as string;
-
-        return new Promise<{ act: string; path?: string }>((resolve) => {
+        return new Promise<{ act: ContextmenuAct; path?: string }>((resolve) => {
             const template = [
                 {
                     label: '打开文件所在位置',
@@ -130,7 +117,7 @@ const exportApis = {
                         const _filePath = getPlatformPath(filePath);
                         console.log(`Open file folder: [${_filePath}].\n`);
                         shell.showItemInFolder(_filePath);
-                        resolve({ act: 'open' });
+                        resolve({ act: 'open', path: _filePath });
                     },
                 },
                 { type: 'separator' },
@@ -138,23 +125,7 @@ const exportApis = {
                     label: '复制项目至...',
                     click: async () => {
                         isClickItem = true;
-                        const selectedPath = await exportApis.selectFolder();
-                        if (selectedPath) {
-                            console.log(`copy folder [${folderPath}] to [${selectedPath}]...`);
-
-                            await copyFolderToSeletedPath(
-                                folderPath,
-                                folderName,
-                                selectedPath
-                            ).catch((e) => {
-                                throw e;
-                            });
-
-                            console.log('folder copied.\n');
-                            resolve({ act: 'copied', path: selectedPath });
-                        } else {
-                            resolve({ act: 'hide' });
-                        }
+                        resolve({ act: 'copySelect' });
                     },
                 },
             ] as unknown as MenuItem[];
@@ -163,18 +134,7 @@ const exportApis = {
                     label: `复制项目至 ${prevSeletedPath}`,
                     click: async () => {
                         isClickItem = true;
-                        console.log(`copy folder [${folderPath}] to [${prevSeletedPath}]...`);
-
-                        await copyFolderToSeletedPath(
-                            folderPath,
-                            folderName,
-                            prevSeletedPath
-                        ).catch((e) => {
-                            throw e;
-                        });
-
-                        console.log('folder copied.\n');
-                        resolve({ act: 'copied', path: prevSeletedPath });
+                        resolve({ act: 'copyToPrev', path: prevSeletedPath });
                     },
                 } as unknown as MenuItem);
             }
@@ -202,6 +162,14 @@ const exportApis = {
         const filePath = getPlatformPath(file);
         console.log(`Open file:[${filePath}].`);
         shell.openPath(filePath);
+    },
+    copyFolderToPath: async (folderPath: string, folderName: string, newPath: string) => {
+        return fs.copy(
+            folderPath,
+            // 选择路径 + 文件夹名
+            `${newPath}/${folderName}`,
+            { overwrite: false }
+        );
     },
     openDbFileFolder: async () => {
         // win平台只接收反斜杠

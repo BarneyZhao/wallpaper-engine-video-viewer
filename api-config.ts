@@ -18,6 +18,7 @@ export const apis: Array<keyof S> = [
   "showContextmenus",
   "selectFolder",
   "openFile",
+  "copyFolderToPath",
   "openDbFileFolder",
   "scanProjectsToDb",
   "getProjectsByPage",
