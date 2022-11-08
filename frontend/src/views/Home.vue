@@ -46,13 +46,13 @@ const queryTitle = ref("");
 const checkRepeat = ref(getLocal<boolean>(CHECK_REPEAT) || false);
 // const dynamicPageSize = ref(getLocal<boolean>("DYNAMIC_PAGE_SIZE") || false);
 
-const getFilePath = (projectFolder: string, file: string) => {
-  return `${selectedPath.value}/${projectFolder}/${file}`;
+const getFullPath = (projectFolder: string, file?: string) => {
+  return `${selectedPath.value}/${projectFolder}${file ? `/${file}` : ""}`;
 };
 
 const syncLoadImg = async (_projects: Project[]) => {
   for (const [index, { project_folder, preview }] of _projects.entries()) {
-    const base64data = await getImg(getFilePath(project_folder, preview));
+    const base64data = await getImg(getFullPath(project_folder, preview));
     projectImgs.value.splice(index, 1, base64data);
     // await new Promise((resolve) => setTimeout(resolve, 1000));
   }
@@ -123,20 +123,42 @@ const orderTypeChange = () => {
 };
 
 const picItemClick = ({ project_folder, file }: Project) => {
-  apis.openFile(getFilePath(project_folder, file));
+  apis.openFile(getFullPath(project_folder, file));
 };
 
 const contextmenuClick = async (
   { project_folder, file }: Project,
   index: number
 ) => {
-  projects.value[index].copyStuts = CopyStuts.RUNING;
   const res = await apis
-    .showContextmenus(getFilePath(project_folder, file), selectedCopyPath.value)
+    .showContextmenus(getFullPath(project_folder, file), selectedCopyPath.value)
     .catch(console.error);
-  if (res?.success && res.data?.act === "copied") {
-    selectedCopyPath.value = res.data.path || "";
-    setLocal("SELECTED_COPY_PATH", res.data.path);
+
+  if (!res?.success) {
+    return;
+  }
+  const folderPath = getFullPath(project_folder);
+  if (res.data?.act === "copySelect") {
+    const selectedRes = await apis.selectFolder();
+    if (selectedRes.success && selectedRes.data) {
+      console.log(`copy folder [${folderPath}] to [${selectedRes.data}]...`);
+      projects.value[index].copyStuts = CopyStuts.RUNING;
+      await apis.copyFolderToPath(folderPath, project_folder, selectedRes.data);
+      selectedCopyPath.value = selectedRes.data;
+      setLocal("SELECTED_COPY_PATH", selectedRes.data);
+      projects.value[index].copyStuts = CopyStuts.COPIED;
+    }
+  }
+  if (res.data?.act === "copyToPrev") {
+    console.log(
+      `copy folder [${folderPath}] to [${selectedCopyPath.value}]...`
+    );
+    projects.value[index].copyStuts = CopyStuts.RUNING;
+    await apis.copyFolderToPath(
+      folderPath,
+      project_folder,
+      selectedCopyPath.value
+    );
     projects.value[index].copyStuts = CopyStuts.COPIED;
   }
 };
@@ -280,6 +302,7 @@ if (selectedPath.value && syncInfo.value.syncWhenInit) {
       <ElBadge
         :hidden="!project.copyStuts"
         :value="project.copyStuts === CopyStuts.RUNING ? '复制中' : '已复制'"
+        :type="project.copyStuts === CopyStuts.RUNING ? 'primary' : 'success'"
       >
         <img
           class="img"
@@ -372,5 +395,11 @@ if (selectedPath.value && syncInfo.value.syncWhenInit) {
       background: #f5f5f5 no-repeat center / 50% 50%;
     }
   }
+}
+</style>
+<style scoped>
+.el-badge >>> sup {
+  right: 0;
+  transform: none;
 }
 </style>
