@@ -19,7 +19,8 @@ export const DEV_URL = 'http://localhost:3000';
 export const DOCS_URL = './docs/index.html';
 
 // 远程 gh-pages
-export const REMOTE_URL = 'https://barneyzhao.github.io/wallpaper-engine-video-viewer/';
+// export const REMOTE_URL = 'https://barneyzhao.github.io/wallpaper-engine-video-viewer/';
+export const REMOTE_URL = 'https://barneyzhao.gitee.io/wallpaper-engine-video-viewer/';
 
 export const WINDOW_OPS = {
     width: 1600,
