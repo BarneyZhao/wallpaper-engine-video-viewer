@@ -205,9 +205,13 @@ watch(
 watch([currentPage], ([_currentPage]) => {
   getProjects(_currentPage);
 });
-watch([syncInfo], ([_syncInfo]) => {
-  setLocal(SYNC_INFO, _syncInfo);
-});
+watch(
+  [syncInfo],
+  ([_syncInfo]) => {
+    setLocal(SYNC_INFO, _syncInfo);
+  },
+  { deep: true }
+);
 
 // 初始化查询
 if (selectedPath.value && syncInfo.value.syncWhenInit) {
@@ -374,6 +378,13 @@ if (selectedPath.value && syncInfo.value.syncWhenInit) {
       overflow: hidden;
     }
   }
+  .el-badge :deep(sup) {
+    right: 0;
+    transform: none;
+    border-radius: unset;
+    border-bottom-left-radius: 8px;
+    opacity: 0.7;
+  }
   .img {
     height: 200px;
     width: 200px;
@@ -395,11 +406,5 @@ if (selectedPath.value && syncInfo.value.syncWhenInit) {
       background: #f5f5f5 no-repeat center / 50% 50%;
     }
   }
-}
-</style>
-<style scoped>
-.el-badge >>> sup {
-  right: 0;
-  transform: none;
 }
 </style>
